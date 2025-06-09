@@ -85,6 +85,8 @@
 
                 if (userFound) {
                     currentUser = userFound; // Simula el inicio de sesión
+                    localStorage.setItem('loggedInUser', JSON.stringify(currentUser)); // Guarda el usuario en localStorage
+
                     showMessage('loginMessage', `¡Bienvenido de nuevo, ${currentUser.name}!`, 'success');
                     loginForm.reset();
                     updateNavigation(); // Actualiza la barra de navegación
