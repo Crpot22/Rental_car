@@ -27,7 +27,8 @@
                 <li><a href="reportes_ingresos.html">Reportes</a></li>
             </ul>
             <div id="nav-user-status" class="nav-user-status">
-                </div>
+                <!-- El estado de usuario se inyecta aquí con JS -->
+            </div>
         </div>
     </nav>
 
@@ -42,7 +43,8 @@
                         <label for="vehicleSelect">Selecciona un Vehículo:</label>
                         <select id="vehicleSelect" required>
                             <option value="">-- Selecciona --</option>
-                            </select>
+                            <!-- Opciones cargadas con JS -->
+                        </select>
                     </div>
                     <div class="form-group">
                         <label for="startDate">Fecha de Recogida:</label>
@@ -84,6 +86,14 @@
     <script src="js/common.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            console.log("DOMContentLoaded en nueva_reserva.html cargado.");
+
+            // Asegurarse de que currentUser se carga desde localStorage al inicio de la página.
+            // Aunque common.js ya lo hace, esta llamada adicional garantiza que la variable
+            // global 'currentUser' esté disponible y actualizada para este script específico.
+            getCurrentUser();
+            console.log("currentUser global después de carga de página (nueva_reserva.html):", currentUser);
+
             const vehicleSelect = document.getElementById('vehicleSelect');
             const startDateInput = document.getElementById('startDate');
             const endDateInput = document.getElementById('endDate');
@@ -95,28 +105,42 @@
 
             // Cargar vehículos en el select
             function loadVehicles() {
+                console.log("loadVehicles() ejecutándose. Vehículos disponibles:", vehicles);
+                vehicleSelect.innerHTML = '<option value="">-- Selecciona --</option>'; // Reinicia las opciones
                 vehicles.forEach(vehicle => {
-                    if (vehicle.status === 'available') { // Solo disponibles
+                    // Solo listar vehículos con estado 'available' o 'cleaning' (para que se puedan reservar si no están alquilados o en mantenimiento)
+                    if (vehicle.status === 'available' || vehicle.status === 'cleaning') {
                         const option = document.createElement('option');
                         option.value = vehicle.id;
                         option.textContent = `${vehicle.model} (${vehicle.licensePlate}) - $${vehicle.dailyRate}/día`;
                         vehicleSelect.appendChild(option);
                     }
                 });
+                console.log("Vehículos cargados en el select.");
             }
 
             // Calcular costo estimado
             function calculateCost() {
                 const selectedVehicleId = vehicleSelect.value;
-                const startDate = new Date(startDateInput.value);
-                const endDate = new Date(endDateInput.value);
+                const startDateStr = startDateInput.value;
+                const endDateStr = endDateInput.value;
 
                 let totalCost = 0;
-                if (selectedVehicleId && startDateInput.value && endDateInput.value && endDate >= startDate) {
+                if (selectedVehicleId && startDateStr && endDateStr) {
+                    const startDate = new Date(startDateStr);
+                    const endDate = new Date(endDateStr);
+
+                    // Validar que las fechas sean válidas y la fecha final no sea antes que la inicial
+                    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime()) || endDate < startDate) {
+                        estimatedCostSpan.textContent = `$0.00`;
+                        return; // Salir si las fechas no son válidas
+                    }
+
                     const selectedVehicle = vehicles.find(v => v.id === selectedVehicleId);
                     if (selectedVehicle) {
                         const timeDiff = endDate.getTime() - startDate.getTime();
-                        const diffDays = Math.ceil(timeDiff / (1000 * 3600 * 24)) +1; // +1 para incluir el día de devolución
+                        // +1 para incluir el día de devolución en el cálculo de días
+                        const diffDays = Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1;
 
                         totalCost = selectedVehicle.dailyRate * diffDays;
 
@@ -125,6 +149,7 @@
                     }
                 }
                 estimatedCostSpan.textContent = `$${totalCost.toFixed(2)}`;
+                console.log("Costo estimado calculado:", estimatedCostSpan.textContent);
             }
 
             // Eventos para recalcular costo
@@ -137,82 +162,130 @@
             // Manejar envío del formulario de reserva
             newReservationForm.addEventListener('submit', (e) => {
                 e.preventDefault();
+                console.log("Evento submit de newReservationForm disparado.");
+
+                // Asegurarse de que currentUser esté actualizado justo antes de la validación
+                getCurrentUser();
+                console.log("currentUser al inicio del handler submit:", currentUser);
+
+                if (!currentUser) {
+                    console.log("Validación: currentUser es null. Mostrando mensaje de login requerido.");
+                    showMessage('reservationMessage', 'Debes iniciar sesión para hacer una reserva.', 'error');
+                    return;
+                }
+                // Si el usuario logueado no es un 'client', puede que no deba reservar
+                // Puedes ajustar esta condición según tus reglas de negocio.
+                // Por ahora, permitimos que cualquier usuario logueado (incluido admin) haga la reserva para depurar.
+                // Si quisieras que solo 'client' pueda reservar, añade:
+                // if (currentUser.role !== 'client') {
+                //     showMessage('reservationMessage', 'Tu perfil no tiene permisos para realizar reservas.', 'error');
+                //     return;
+                // }
+
 
                 const selectedVehicleId = vehicleSelect.value;
                 const startDate = startDateInput.value;
                 const endDate = endDateInput.value;
-                const currentUser = getCurrentUser(); // Obtener el usuario actual
 
-                if (!currentUser) {
-                    showMessage('reservationMessage', 'Debes iniciar sesión para hacer una reserva.', 'error');
-                    return;
-                }
+                console.log("Datos de formulario:", { selectedVehicleId, startDate, endDate });
 
                 if (!selectedVehicleId || !startDate || !endDate) {
+                    console.log("Validación: Campos obligatorios no completados.");
                     showMessage('reservationMessage', 'Por favor, completa todos los campos de la reserva.', 'error');
                     return;
                 }
+                console.log("Validación: Campos obligatorios completados.");
 
                 const startDt = new Date(startDate);
                 const endDt = new Date(endDate);
 
                 if (endDt < startDt) {
+                    console.log("Validación: Fecha de devolución anterior a fecha de recogida.");
                     showMessage('reservationMessage', 'La fecha de devolución no puede ser anterior a la fecha de recogida.', 'error');
                     return;
                 }
                 if (startDt < new Date().setHours(0,0,0,0)) { // No permitir fechas pasadas
+                    console.log("Validación: Fecha de recogida en el pasado.");
                     showMessage('reservationMessage', 'La fecha de recogida no puede ser en el pasado.', 'error');
                     return;
                 }
-
+                console.log("Validación: Fechas válidas.");
 
                 // Simular verificación de disponibilidad
+                // Esta lógica verifica si HAY ALGUNA reserva existente que se solape con las nuevas fechas
+                // para el MISMO vehículo. Si la hay, isAvailable será false.
                 const isAvailable = !reservations.some(res =>
                     res.vehicleId === selectedVehicleId &&
+                    // Comprueba si los rangos de fechas se solapan:
+                    // (Inicio de nueva reserva < Fin de reserva existente) Y (Fin de nueva reserva > Inicio de reserva existente)
                     (new Date(startDate) < new Date(res.endDate) && new Date(endDate) > new Date(res.startDate))
                 );
 
+                console.log("¿Vehículo disponible según las reservas existentes?", isAvailable);
+
                 if (!isAvailable) {
+                    console.log("Validación: Vehículo no disponible en las fechas seleccionadas.");
                     showMessage('reservationMessage', 'El vehículo no está disponible en las fechas seleccionadas.', 'error');
                     return;
                 }
+                console.log("Validación: Vehículo disponible. Procediendo a crear reserva.");
 
                 // Simular creación de reserva
                 const selectedVehicle = vehicles.find(v => v.id === selectedVehicleId);
-                const daysDiff = Math.ceil((endDt.getTime() - startDt.getTime()) / (1000 * 3600 * 24)) +1;
+                console.log("Objeto del vehículo seleccionado:", selectedVehicle);
+
+                // ** IMPORTANTE: Asegúrate de que selectedVehicle no es undefined si el select no tiene valor válido
+                if (!selectedVehicle) {
+                    console.log("Error crítico: Vehículo seleccionado no encontrado en el array 'vehicles'.");
+                    showMessage('reservationMessage', 'Error interno: El vehículo seleccionado no pudo ser encontrado.', 'error');
+                    return;
+                }
+
+                const daysDiff = Math.ceil((endDt.getTime() - startDt.getTime()) / (1000 * 3600 * 24)) + 1;
                 const calculatedCost = selectedVehicle.dailyRate * daysDiff + (gpsCheckbox.checked ? 5 * daysDiff : 0) + (childSeatCheckbox.checked ? 10 : 0);
+                console.log("Costo calculado:", calculatedCost);
 
 
                 const newReservation = {
-                    id: generateId('r'),
+                    id: generateId('r'), // Asegúrate que 'generateId' está accesible desde 'data.js'
                     vehicleId: selectedVehicleId,
-                    userId: currentUser.id,
+                    userId: currentUser.id, // Asegúrate que currentUser.id exista
                     startDate: startDate,
                     endDate: endDate,
                     status: 'confirmed', // o 'pending'
                     totalCost: calculatedCost.toFixed(2)
                 };
+                console.log("Objeto de nueva reserva creado:", newReservation);
 
-                reservations.push(newReservation); // Añadir a la lista de reservas (temporalmente)
+                // Añadir a la lista de reservas (temporalmente en la memoria del navegador)
+                reservations.push(newReservation);
+                console.log("Array de reservas después de añadir:", reservations);
 
                 // Opcional: Actualizar el estado del vehículo a "rented" si es una reserva inmediata
                 const vehicleToUpdate = vehicles.find(v => v.id === selectedVehicleId);
                 if (vehicleToUpdate && (new Date(startDate)).toDateString() === (new Date()).toDateString()) {
                      vehicleToUpdate.status = 'rented';
+                     console.log("Estado del vehículo actualizado a 'rented':", vehicleToUpdate);
                 }
 
                 showMessage('reservationMessage', `¡Reserva confirmada para ${selectedVehicle.model}! Costo: $${newReservation.totalCost}`, 'success');
-                newReservationForm.reset();
-                estimatedCostSpan.textContent = '$0.00';
-                // Puedes redirigir a mis_reservas.html
+                console.log("Mensaje de reserva confirmada mostrado.");
+                newReservationForm.reset(); // Limpia el formulario
+                estimatedCostSpan.textContent = '$0.00'; // Restablece el costo estimado
+                console.log("Formulario y costo estimado restablecidos.");
+
+                // Puedes redirigir a mis_reservas.html después de un breve retraso
+                // console.log("Redirigiendo a mis_reservas.html en 2 segundos...");
                 // setTimeout(() => { window.location.href = 'mis_reservas.html'; }, 2000);
             });
 
-            loadVehicles();
+            // Llamadas iniciales al cargar la página
+            loadVehicles(); // Carga los vehículos disponibles en el select
             // Asegura que la fecha de inicio no sea anterior a hoy
             const today = new Date().toISOString().split('T')[0];
             startDateInput.setAttribute('min', today);
             endDateInput.setAttribute('min', today);
+            console.log("Fechas mínimas de input establecidas.");
         });
     </script>
 </body>
