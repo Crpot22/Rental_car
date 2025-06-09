@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoRenta Express - Gestión de Vehículos</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <img src="img/logo.png" alt="AutoRenta Express Logo" class="logo">
+            <h1>AutoRenta Express</h1>
+            <p>Tu socio confiable para el alquiler de vehículos</p>
+        </div>
+    </header>
+
+    <nav>
+        <div class="container">
+            <ul>
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="gestion_autos.html" class="active">Gestión de Autos</a></li>
+                <li><a href="nueva_reserva.html">Nueva Reserva</a></li>
+                <li><a href="mis_reservas.html">Mis Reservas</a></li>
+                <li><a href="disponibilidad.html">Disponibilidad</a></li>
+                <li><a href="control_mantenimiento.html">Mantenimiento</a></li>
+                <li><a href="reportes_ingresos.html">Reportes</a></li>
+            </ul>
+            <div id="nav-user-status" class="nav-user-status">
+                </div>
+        </div>
+    </nav>
+
+    <main>
+        <section class="vehicle-management">
+            <div class="container">
+                <h2>Gestión de la Flota de Vehículos</h2>
+                <p>Aquí puedes ver y simular la edición del estado de cada vehículo. Los cambios son **temporales** y se perderán al recargar la página.</p>
+
+                <div class="vehicle-list" id="vehicleList">
+                    </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 AutoRenta Express. Todos los derechos reservados.</p>
+            <p>Síguenos en: <a href="#">Facebook</a> | <a href="#">Instagram</a></p>
+        </div>
+    </footer>
+
+    <script src="js/data.js"></script>
+    <script src="js/common.js"></script>
+    <script>
+        // Función para renderizar (dibujar) los vehículos en la página
+        function renderVehiculos() {
+            const vehicleListDiv = document.getElementById('vehicleList');
+            vehicleListDiv.innerHTML = ''; // Limpia el contenido existente
+
+            vehicles.forEach(vehiculo => {
+                const card = document.createElement('div');
+                card.classList.add('vehicle-card');
+                card.dataset.vehicleId = vehiculo.id;
+
+                let statusClass = '';
+                switch (vehiculo.status) {
+                    case 'available': statusClass = 'status-available'; break;
+                    case 'rented': statusClass = 'status-rented'; break;
+                    case 'maintenance': statusClass = 'status-maintenance'; break;
+                    case 'cleaning': statusClass = 'status-cleaning'; break;
+                }
+
+                card.innerHTML = `
+                    <img src="${vehiculo.image}" alt="${vehiculo.model}">
+                    <h3>${vehiculo.model}</h3>
+                    <p><strong>Placa:</strong> ${vehiculo.licensePlate}</p>
+                    <p><strong>Último Cliente:</strong> ${vehiculo.lastClient}</p>
+                    <div class="vehicle-status">
+                        <p><strong>Estado Actual:</strong> <span class="${statusClass}">${vehiculo.status.charAt(0).toUpperCase() + vehiculo.status.slice(1)}</span></p>
+                        <button class="btn btn-secondary edit-status-btn">Editar Estado</button>
+                        <div class="edit-status-form" style="display: none;">
+                            <div>
+                                <label for="status-${vehiculo.id}">Nuevo Estado:</label>
+                                <select id="status-${vehiculo.id}">
+                                    <option value="available" ${vehiculo.status === 'available' ? 'selected' : ''}>Disponible</option>
+                                    <option value="rented" ${vehiculo.status === 'rented' ? 'selected' : ''}>Alquilado</option>
+                                    <option value="maintenance" ${vehiculo.status === 'maintenance' ? 'selected' : ''}>En Mantenimiento</option>
+                                    <option value="cleaning" ${vehiculo.status === 'cleaning' ? 'selected' : ''}>En Limpieza</option>
+                                </select>
+                            </div>
+                            <button class="btn btn-primary apply-status-btn" data-vehicle-id="${vehiculo.id}">Aplicar</button>
+                        </div>
+                    </div>
+                    <p class="message" id="msg-${vehiculo.id}"></p>
+                `;
+                vehicleListDiv.appendChild(card);
+            });
+
+            addEventListenersToVehicles();
+        }
+
+        function addEventListenersToVehicles() {
+            document.querySelectorAll('.edit-status-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const form = this.nextElementSibling;
+                    form.style.display = form.style.display === 'none' || form.style.display === '' ? 'flex' : 'none';
+                    // Oculta el mensaje si estaba visible
+                    this.closest('.vehicle-card').querySelector('.message').style.display = 'none';
+                });
+            });
+
+            document.querySelectorAll('.apply-status-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const vehicleId = this.dataset.vehicleId;
+                    const card = this.closest('.vehicle-card');
+                    const selectElement = card.querySelector(`#status-${vehicleId}`);
+                    const newStatus = selectElement.value;
+                    const messageId = `msg-${vehicleId}`;
+
+                    const vehiculoIndex = vehicles.findIndex(v => v.id === vehicleId);
+                    if (vehiculoIndex !== -1) {
+                        vehicles[vehiculoIndex].status = newStatus;
+
+                        const statusSpan = card.querySelector('.vehicle-status p strong + span');
+                        statusSpan.textContent = newStatus.charAt(0).toUpperCase() + newStatus.slice(1);
+                        statusSpan.className = '';
+                        switch (newStatus) {
+                            case 'available': statusSpan.classList.add('status-available'); break;
+                            case 'rented': statusSpan.classList.add('status-rented'); break;
+                            case 'maintenance': statusSpan.classList.add('status-maintenance'); break;
+                            case 'cleaning': statusSpan.classList.add('status-cleaning'); break;
+                        }
+
+                        showMessage(messageId, `Estado actualizado a "${newStatus.charAt(0).toUpperCase() + newStatus.slice(1)}".`, 'success');
+
+                    } else {
+                        showMessage(messageId, 'Error: Vehículo no encontrado.', 'error');
+                    }
+                    this.closest('.edit-status-form').style.display = 'none';
+                });
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', renderVehiculos);
+    </script>
+</body>
+</html>

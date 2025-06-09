@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoRenta Express - Iniciar Sesión</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <img src="img/logo.png" alt="AutoRenta Express Logo" class="logo">
+            <h1>AutoRenta Express</h1>
+            <p>Tu socio confiable para el alquiler de vehículos</p>
+        </div>
+    </header>
+
+    <nav>
+        <div class="container">
+            <ul>
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="gestion_autos.html">Gestión de Autos</a></li>
+                <li><a href="nueva_reserva.html">Nueva Reserva</a></li>
+                <li><a href="mis_reservas.html">Mis Reservas</a></li>
+                <li><a href="disponibilidad.html">Disponibilidad</a></li>
+                <li><a href="control_mantenimiento.html">Mantenimiento</a></li>
+                <li><a href="reportes_ingresos.html">Reportes</a></li>
+            </ul>
+            <div id="nav-user-status" class="nav-user-status">
+                </div>
+        </div>
+    </nav>
+
+    <main>
+        <section class="auth-form">
+            <div class="container">
+                <h2>Inicia Sesión en AutoRenta Express</h2>
+                <p>Ingresa tus credenciales para continuar.</p>
+
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label for="loginEmail">Correo Electrónico:</label>
+                        <input type="email" id="loginEmail" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="loginPassword">Contraseña:</label>
+                        <input type="password" id="loginPassword" name="password" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Ingresar</button>
+                    <div id="loginMessage" class="message"></div>
+                </form>
+
+                <p class="mt-3">¿No tienes cuenta? <a href="registro.html">Regístrate aquí</a></p>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 AutoRenta Express. Todos los derechos reservados.</p>
+            <p>Síguenos en: <a href="#">Facebook</a> | <a href="#">Instagram</a></p>
+        </div>
+    </footer>
+
+    <script src="js/data.js"></script>
+    <script src="js/common.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const loginForm = document.getElementById('loginForm');
+            const loginMessage = document.getElementById('loginMessage');
+
+            loginForm.addEventListener('submit', (e) => {
+                e.preventDefault(); // Evita que el formulario se envíe realmente
+
+                const email = document.getElementById('loginEmail').value.trim();
+                const password = document.getElementById('loginPassword').value;
+
+                if (!email || !password) {
+                    showMessage('loginMessage', 'Por favor, ingresa tu correo y contraseña.', 'error');
+                    return;
+                }
+
+                // Simular autenticación
+                const userFound = users.find(user => user.username === email && user.password === password);
+
+                if (userFound) {
+                    currentUser = userFound; // Simula el inicio de sesión
+                    showMessage('loginMessage', `¡Bienvenido de nuevo, ${currentUser.name}!`, 'success');
+                    loginForm.reset();
+                    updateNavigation(); // Actualiza la barra de navegación
+                    setTimeout(() => {
+                        window.location.href = 'index.html'; // Redirige a la página principal
+                    }, 1500);
+                } else {
+                    showMessage('loginMessage', 'Correo o contraseña incorrectos.', 'error');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoRenta Express - Control de Mantenimiento</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <img src="img/logo.png" alt="AutoRenta Express Logo" class="logo">
+            <h1>AutoRenta Express</h1>
+            <p>Tu socio confiable para el alquiler de vehículos</p>
+        </div>
+    </header>
+
+    <nav>
+        <div class="container">
+            <ul>
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="gestion_autos.html">Gestión de Autos</a></li>
+                <li><a href="nueva_reserva.html">Nueva Reserva</a></li>
+                <li><a href="mis_reservas.html">Mis Reservas</a></li>
+                <li><a href="disponibilidad.html">Disponibilidad</a></li>
+                <li><a href="control_mantenimiento.html" class="active">Mantenimiento</a></li>
+                <li><a href="reportes_ingresos.html">Reportes</a></li>
+            </ul>
+            <div id="nav-user-status" class="nav-user-status">
+                </div>
+        </div>
+    </nav>
+
+    <main>
+        <section>
+            <div class="container">
+                <h2>Control de Mantenimiento de Flota</h2>
+                <p>Registra y visualiza los mantenimientos programados y realizados. Los datos son temporales.</p>
+
+                <form id="maintenanceForm">
+                    <h3>Registrar Nuevo Mantenimiento</h3>
+                    <div class="form-group">
+                        <label for="maintVehicleSelect">Vehículo:</label>
+                        <select id="maintVehicleSelect" required>
+                            <option value="">-- Selecciona --</option>
+                            </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="maintDate">Fecha:</label>
+                        <input type="date" id="maintDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="maintType">Tipo de Mantenimiento:</label>
+                        <input type="text" id="maintType" placeholder="Ej: Cambio de aceite, Revisión frenos" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="maintNotes">Notas:</label>
+                        <textarea id="maintNotes" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="maintStatus">Estado:</label>
+                        <select id="maintStatus" required>
+                            <option value="pending">Pendiente</option>
+                            <option value="completed">Completado</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Registrar Mantenimiento</button>
+                    <div id="maintenanceMessage" class="message"></div>
+                </form>
+
+                <h3>Historial de Mantenimientos</h3>
+                <div id="maintenanceListContainer">
+                    <p id="noMaintenanceMessage" style="display: none; text-align: center; color: #555;">No hay registros de mantenimiento.</p>
+                    <table class="data-table" id="maintenanceTable" style="display: none;">
+                        <thead>
+                            <tr>
+                                <th>Vehículo</th>
+                                <th>Fecha</th>
+                                <th>Tipo</th>
+                                <th>Notas</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 AutoRenta Express. Todos los derechos reservados.</p>
+            <p>Síguenos en: <a href="#">Facebook</a> | <a href="#">Instagram</a></p>
+        </div>
+    </footer>
+
+    <script src="js/data.js"></script>
+    <script src="js/common.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const maintVehicleSelect = document.getElementById('maintVehicleSelect');
+            const maintenanceForm = document.getElementById('maintenanceForm');
+            const maintenanceMessage = document.getElementById('maintenanceMessage');
+            const maintenanceTableBody = document.querySelector('#maintenanceTable tbody');
+            const noMaintenanceMessage = document.getElementById('noMaintenanceMessage');
+            const maintenanceTable = document.getElementById('maintenanceTable');
+
+            // Cargar vehículos en el select del formulario
+            function loadVehiclesForMaintenance() {
+                vehicles.forEach(vehicle => {
+                    const option = document.createElement('option');
+                    option.value = vehicle.id;
+                    option.textContent = `${vehicle.model} (${vehicle.licensePlate})`;
+                    maintVehicleSelect.appendChild(option);
+                });
+            }
+
+            // Renderizar la tabla de mantenimientos
+            function renderMaintenances() {
+                maintenanceTableBody.innerHTML = '';
+                if (maintenances.length === 0) {
+                    noMaintenanceMessage.style.display = 'block';
+                    maintenanceTable.style.display = 'none';
+                    return;
+                } else {
+                    noMaintenanceMessage.style.display = 'none';
+                    maintenanceTable.style.display = 'table';
+                }
+
+                maintenances.forEach(maint => {
+                    const vehicle = vehicles.find(v => v.id === maint.vehicleId);
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td data-label="Vehículo">${vehicle ? vehicle.model : 'Desconocido'}</td>
+                        <td data-label="Fecha">${maint.date}</td>
+                        <td data-label="Tipo">${maint.type}</td>
+                        <td data-label="Notas">${maint.notes || 'N/A'}</td>
+                        <td data-label="Estado">${maint.status.charAt(0).toUpperCase() + maint.status.slice(1)}</td>
+                        <td data-label="Acciones">
+                            <button class="btn btn-secondary btn-sm toggle-status-btn" data-maint-id="${maint.id}">
+                                ${maint.status === 'pending' ? 'Marcar Completado' : 'Marcar Pendiente'}
+                            </button>
+                        </td>
+                    `;
+                    maintenanceTableBody.appendChild(row);
+                });
+
+                // Añadir event listeners a los botones de cambiar estado
+                document.querySelectorAll('.toggle-status-btn').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const maintId = this.dataset.maintId;
+                        toggleMaintenanceStatus(maintId);
+                    });
+                });
+            }
+
+            // Cambiar estado del mantenimiento
+            function toggleMaintenanceStatus(id) {
+                const maintIndex = maintenances.findIndex(m => m.id === id);
+                if (maintIndex !== -1) {
+                    maintenances[maintIndex].status = maintenances[maintIndex].status === 'pending' ? 'completed' : 'pending';
+                    showMessage('maintenanceMessage', `Estado de mantenimiento actualizado (temporalmente).`, 'success');
+                    renderMaintenances(); // Volver a renderizar
+                } else {
+                    showMessage('maintenanceMessage', 'Error: Mantenimiento no encontrado.', 'error');
+                }
+            }
+
+            // Manejar envío del formulario de mantenimiento
+            maintenanceForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+
+                const vehicleId = maintVehicleSelect.value;
+                const date = document.getElementById('maintDate').value;
+                const type = document.getElementById('maintType').value.trim();
+                const notes = document.getElementById('maintNotes').value.trim();
+                const status = document.getElementById('maintStatus').value;
+
+                if (!vehicleId || !date || !type || !status) {
+                    showMessage('maintenanceMessage', 'Por favor, completa todos los campos obligatorios.', 'error');
+                    return;
+                }
+                if (new Date(date) < new Date().setHours(0,0,0,0)) {
+                    showMessage('maintenanceMessage', 'La fecha de mantenimiento no puede ser en el pasado.', 'error');
+                    return;
+                }
+
+                const newMaintenance = {
+                    id: generateId('m'),
+                    vehicleId: vehicleId,
+                    date: date,
+                    type: type,
+                    notes: notes,
+                    status: status
+                };
+                maintenances.push(newMaintenance); // Añadir a la lista (temporalmente)
+
+                showMessage('maintenanceMessage', 'Mantenimiento registrado exitosamente (temporalmente).', 'success');
+                maintenanceForm.reset();
+                renderMaintenances(); // Volver a dibujar la tabla
+            });
+
+            loadVehiclesForMaintenance();
+            renderMaintenances();
+             // Asegura que la fecha de mantenimiento no sea anterior a hoy
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('maintDate').setAttribute('min', today);
+        });
+    </script>
+</body>
+</html>

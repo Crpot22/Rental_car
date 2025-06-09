@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoRenta Express - Mis Reservas</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <img src="img/logo.png" alt="AutoRenta Express Logo" class="logo">
+            <h1>AutoRenta Express</h1>
+            <p>Tu socio confiable para el alquiler de vehículos</p>
+        </div>
+    </header>
+
+    <nav>
+        <div class="container">
+            <ul>
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="gestion_autos.html">Gestión de Autos</a></li>
+                <li><a href="nueva_reserva.html">Nueva Reserva</a></li>
+                <li><a href="mis_reservas.html" class="active">Mis Reservas</a></li>
+                <li><a href="disponibilidad.html">Disponibilidad</a></li>
+                <li><a href="control_mantenimiento.html">Mantenimiento</a></li>
+                <li><a href="reportes_ingresos.html">Reportes</a></li>
+            </ul>
+            <div id="nav-user-status" class="nav-user-status">
+                </div>
+        </div>
+    </nav>
+
+    <main>
+        <section>
+            <div class="container">
+                <h2>Mis Reservas Activas</h2>
+                <p>Aquí puedes ver el historial de tus reservas. Ten en cuenta que los cambios son temporales.</p>
+
+                <div id="reservationListContainer">
+                    <p id="noReservationsMessage" style="display: none; text-align: center; color: #555;">No tienes reservas activas.</p>
+                    <table class="data-table" id="reservationsTable" style="display: none;">
+                        <thead>
+                            <tr>
+                                <th>Vehículo</th>
+                                <th>Fecha Recogida</th>
+                                <th>Fecha Devolución</th>
+                                <th>Costo</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            </tbody>
+                    </table>
+                </div>
+                <div id="cancelMessage" class="message"></div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 AutoRenta Express. Todos los derechos reservados.</p>
+            <p>Síguenos en: <a href="#">Facebook</a> | <a href="#">Instagram</a></p>
+        </div>
+    </footer>
+
+    <script src="js/data.js"></script>
+    <script src="js/common.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const reservationsTableBody = document.querySelector('#reservationsTable tbody');
+            const noReservationsMessage = document.getElementById('noReservationsMessage');
+            const reservationsTable = document.getElementById('reservationsTable');
+            const cancelMessage = document.getElementById('cancelMessage');
+            const currentUser = getCurrentUser(); // Obtener el usuario actual
+
+            if (!currentUser) {
+                document.getElementById('reservationListContainer').innerHTML = `
+                    <p style="text-align: center; color: ${getComputedStyle(document.documentElement).getPropertyValue('--danger-color')}">
+                        Debes iniciar sesión para ver tus reservas.
+                    </p>`;
+                return;
+            }
+
+            function renderReservations() {
+                reservationsTableBody.innerHTML = ''; // Limpiar tabla
+                const userReservations = reservations.filter(res => res.userId === currentUser.id);
+
+                if (userReservations.length === 0) {
+                    noReservationsMessage.style.display = 'block';
+                    reservationsTable.style.display = 'none';
+                    return;
+                } else {
+                    noReservationsMessage.style.display = 'none';
+                    reservationsTable.style.display = 'table';
+                }
+
+                userReservations.forEach(reservation => {
+                    const vehicle = vehicles.find(v => v.id === reservation.vehicleId);
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td data-label="Vehículo">${vehicle ? vehicle.model : 'Desconocido'}</td>
+                        <td data-label="Fecha Recogida">${reservation.startDate}</td>
+                        <td data-label="Fecha Devolución">${reservation.endDate}</td>
+                        <td data-label="Costo">$${parseFloat(reservation.totalCost).toFixed(2)}</td>
+                        <td data-label="Estado">${reservation.status.charAt(0).toUpperCase() + reservation.status.slice(1)}</td>
+                        <td data-label="Acciones">
+                            <button class="btn btn-danger btn-sm cancel-reservation-btn" data-reservation-id="${reservation.id}">Cancelar</button>
+                        </td>
+                    `;
+                    reservationsTableBody.appendChild(row);
+                });
+
+                // Añadir event listeners a los botones de cancelar
+                document.querySelectorAll('.cancel-reservation-btn').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const reservationId = this.dataset.reservationId;
+                        if (confirm('¿Estás seguro de que quieres cancelar esta reserva?')) {
+                            cancelReservation(reservationId);
+                        }
+                    });
+                });
+            }
+
+            function cancelReservation(id) {
+                const initialLength = reservations.length;
+                reservations = reservations.filter(res => res.id !== id); // Eliminar de la lista temporal
+                if (reservations.length < initialLength) {
+                    showMessage('cancelMessage', 'Reserva cancelada exitosamente. Los cambios son temporales.', 'success');
+                } else {
+                    showMessage('cancelMessage', 'Error al cancelar la reserva.', 'error');
+                }
+                renderReservations(); // Volver a dibujar la tabla
+            }
+
+            renderReservations(); // Cargar reservas al inicio
+        });
+    </script>
+</body>
+</html>

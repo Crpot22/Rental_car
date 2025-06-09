@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoRenta Express - Disponibilidad de Autos</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <img src="img/logo.png" alt="AutoRenta Express Logo" class="logo">
+            <h1>AutoRenta Express</h1>
+            <p>Tu socio confiable para el alquiler de vehículos</p>
+        </div>
+    </header>
+
+    <nav>
+        <div class="container">
+            <ul>
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="gestion_autos.html">Gestión de Autos</a></li>
+                <li><a href="nueva_reserva.html">Nueva Reserva</a></li>
+                <li><a href="mis_reservas.html">Mis Reservas</a></li>
+                <li><a href="disponibilidad.html" class="active">Disponibilidad</a></li>
+                <li><a href="control_mantenimiento.html">Mantenimiento</a></li>
+                <li><a href="reportes_ingresos.html">Reportes</a></li>
+            </ul>
+            <div id="nav-user-status" class="nav-user-status">
+                </div>
+        </div>
+    </nav>
+
+    <main>
+        <section>
+            <div class="container">
+                <h2>Disponibilidad de la Flota (Próximos 7 Días)</h2>
+                <p>Consulta la disponibilidad de nuestros vehículos en el calendario. Los datos son de prueba.</p>
+
+                <div class="calendar-grid" id="availabilityCalendar">
+                    </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 AutoRenta Express. Todos los derechos reservados.</p>
+            <p>Síguenos en: <a href="#">Facebook</a> | <a href="#">Instagram</a></p>
+        </div>
+    </footer>
+
+    <script src="js/data.js"></script>
+    <script src="js/common.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const calendarGrid = document.getElementById('availabilityCalendar');
+            const today = new Date();
+
+            // Función para obtener la clase CSS según el estado
+            function getCalendarStatusClass(status) {
+                switch (status) {
+                    case 'available': return 'calendar-available';
+                    case 'rented': return 'calendar-rented';
+                    case 'maintenance': return 'calendar-maintenance';
+                    default: return '';
+                }
+            }
+
+            // Función para renderizar el calendario
+            function renderCalendar() {
+                calendarGrid.innerHTML = '';
+
+                // Añadir celda vacía para la esquina
+                const cornerCell = document.createElement('div');
+                cornerCell.classList.add('calendar-cell', 'calendar-header');
+                calendarGrid.appendChild(cornerCell);
+
+                // Añadir cabeceras de los días (próximos 7 días)
+                const dates = [];
+                for (let i = 0; i < 7; i++) {
+                    const d = new Date(today);
+                    d.setDate(today.getDate() + i);
+                    dates.push(d);
+
+                    const headerCell = document.createElement('div');
+                    headerCell.classList.add('calendar-cell', 'calendar-header');
+                    headerCell.innerHTML = `
+                        <span class="day-number">${d.getDate()}</span>
+                        <span>${d.toLocaleDateString('es-ES', { weekday: 'short' })}</span>
+                    `;
+                    calendarGrid.appendChild(headerCell);
+                }
+
+                // Añadir filas por cada vehículo
+                vehicles.forEach(vehicle => {
+                    const vehicleHeader = document.createElement('div');
+                    vehicleHeader.classList.add('calendar-cell', 'calendar-header');
+                    vehicleHeader.textContent = vehicle.model.split(' ')[0]; // Solo la marca
+                    calendarGrid.appendChild(vehicleHeader);
+
+                    dates.forEach(date => {
+                        const cell = document.createElement('div');
+                        cell.classList.add('calendar-cell');
+
+                        // Determinar el estado para este vehículo en esta fecha
+                        let currentStatus = vehicle.status; // Estado base del vehículo
+
+                        // Verificar si está reservado en esta fecha
+                        const isReserved = reservations.some(res => {
+                            return res.vehicleId === vehicle.id &&
+                                new Date(date) >= new Date(res.startDate) &&
+                                new Date(date) <= new Date(res.endDate);
+                        });
+
+                        // Verificar si tiene mantenimiento programado
+                        const hasMaintenance = maintenances.some(maint => {
+                            // Suponemos que el mantenimiento dura un día o está programado para ese día
+                            return maint.vehicleId === vehicle.id &&
+                                new Date(maint.date).toDateString() === date.toDateString() &&
+                                maint.status !== 'completed'; // Solo si no está completado
+                        });
+
+                        if (isReserved) {
+                            currentStatus = 'rented';
+                        } else if (hasMaintenance) {
+                            currentStatus = 'maintenance';
+                        }
+                        // Si está 'cleaning', lo mantenemos
+                        else if (vehicle.status === 'cleaning') {
+                             currentStatus = 'cleaning';
+                        }
+                        else {
+                            currentStatus = 'available'; // Si no hay nada, está disponible
+                        }
+
+
+                        cell.classList.add(getCalendarStatusClass(currentStatus));
+                        cell.innerHTML = `
+                            ${currentStatus === 'available' ? '✅' :
+                                currentStatus === 'rented' ? '🚫' :
+                                currentStatus === 'maintenance' ? '🔧' : '🧹'}
+                        `; // Usamos emojis para simplificar
+                        calendarGrid.appendChild(cell);
+                    });
+                });
+            }
+
+            renderCalendar();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoRenta Express - Reportes de Ingresos</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <img src="img/logo.png" alt="AutoRenta Express Logo" class="logo">
+            <h1>AutoRenta Express</h1>
+            <p>Tu socio confiable para el alquiler de vehículos</p>
+        </div>
+    </header>
+
+    <nav>
+        <div class="container">
+            <ul>
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="gestion_autos.html">Gestión de Autos</a></li>
+                <li><a href="nueva_reserva.html">Nueva Reserva</a></li>
+                <li><a href="mis_reservas.html">Mis Reservas</a></li>
+                <li><a href="disponibilidad.html">Disponibilidad</a></li>
+                <li><a href="control_mantenimiento.html">Mantenimiento</a></li>
+                <li><a href="reportes_ingresos.html" class="active">Reportes</a></li>
+            </ul>
+            <div id="nav-user-status" class="nav-user-status">
+                </div>
+        </div>
+    </nav>
+
+    <main>
+        <section>
+            <div class="container">
+                <h2>Reportes de Ingresos y Gastos</h2>
+                <p>Aquí puedes ver un reporte simulado de tus finanzas. Los cálculos se basan en los datos temporales del navegador.</p>
+
+                <div class="report-summary">
+                    <p><strong>Período del Reporte:</strong> Datos desde el inicio hasta hoy.</p>
+                    <p><strong>Total de Ingresos por Alquiler:</strong> <span id="totalRevenue">$0.00</span></p>
+                    <p><strong>Total de Gastos de Mantenimiento:</strong> <span id="totalExpenses">$0.00</span></p>
+                    <h3>Beneficio Neto Estimado: <span id="netProfit">$0.00</span></h3>
+                </div>
+
+                <h3>Detalle de Transacciones</h3>
+                <div id="transactionsListContainer">
+                    <p id="noTransactionsMessage" style="display: none; text-align: center; color: #555;">No hay transacciones registradas.</p>
+                    <table class="data-table" id="transactionsTable" style="display: none;">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Concepto</th>
+                                <th>Monto</th>
+                                <th>Tipo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 AutoRenta Express. Todos los derechos reservados.</p>
+            <p>Síguenos en: <a href="#">Facebook</a> | <a href="#">Instagram</a></p>
+        </div>
+    </footer>
+
+    <script src="js/data.js"></script>
+    <script src="js/common.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const totalRevenueSpan = document.getElementById('totalRevenue');
+            const totalExpensesSpan = document.getElementById('totalExpenses');
+            const netProfitSpan = document.getElementById('netProfit');
+            const transactionsTableBody = document.querySelector('#transactionsTable tbody');
+            const noTransactionsMessage = document.getElementById('noTransactionsMessage');
+            const transactionsTable = document.getElementById('transactionsTable');
+
+            function generateReport() {
+                let totalRevenue = 0;
+                let totalExpenses = 0;
+                let allTransactions = [];
+
+                // Procesar ingresos por reservas
+                reservations.forEach(res => {
+                    const vehicle = vehicles.find(v => v.id === res.vehicleId);
+                    if (vehicle && res.status === 'confirmed') { // Solo reservas confirmadas
+                        totalRevenue += parseFloat(res.totalCost);
+                        allTransactions.push({
+                            date: res.startDate,
+                            concept: `Alquiler: ${vehicle.model} (${res.startDate} a ${res.endDate})`,
+                            amount: parseFloat(res.totalCost),
+                            type: 'Ingreso'
+                        });
+                    }
+                });
+
+                // Procesar gastos por mantenimiento
+                maintenances.forEach(maint => {
+                    const vehicle = vehicles.find(v => v.id === maint.vehicleId);
+                    // Aquí puedes asignar un costo fijo o variable al mantenimiento para la simulación
+                    const maintCost = 50; // Costo simulado por cada mantenimiento
+                    if (maint.status === 'completed') { // Solo mantenimientos completados como gasto
+                        totalExpenses += maintCost;
+                        allTransactions.push({
+                            date: maint.date,
+                            concept: `Mantenimiento: ${vehicle ? vehicle.model : 'Desconocido'} - ${maint.type}`,
+                            amount: -maintCost, // Negativo para gastos
+                            type: 'Gasto'
+                        });
+                    }
+                });
+
+                const netProfit = totalRevenue - totalExpenses;
+
+                totalRevenueSpan.textContent = `$${totalRevenue.toFixed(2)}`;
+                totalExpensesSpan.textContent = `$${totalExpenses.toFixed(2)}`;
+                netProfitSpan.textContent = `$${netProfit.toFixed(2)}`;
+
+                // Ordenar transacciones por fecha
+                allTransactions.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+                // Renderizar tabla de transacciones
+                transactionsTableBody.innerHTML = '';
+                if (allTransactions.length === 0) {
+                    noTransactionsMessage.style.display = 'block';
+                    transactionsTable.style.display = 'none';
+                } else {
+                    noTransactionsMessage.style.display = 'none';
+                    transactionsTable.style.display = 'table';
+                    allTransactions.forEach(trans => {
+                        const row = document.createElement('tr');
+                        const amountClass = trans.type === 'Ingreso' ? 'status-available' : 'status-rented'; // Usamos clases de color existentes
+                        row.innerHTML = `
+                            <td data-label="Fecha">${trans.date}</td>
+                            <td data-label="Concepto">${trans.concept}</td>
+                            <td data-label="Monto"><span class="${amountClass}">${trans.amount.toFixed(2)}</span></td>
+                            <td data-label="Tipo">${trans.type}</td>
+                        `;
+                        transactionsTableBody.appendChild(row);
+                    });
+                }
+            }
+
+            generateReport();
+        });
+    </script>
+</body>
+</html>
