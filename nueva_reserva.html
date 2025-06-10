@@ -87,12 +87,8 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             console.log("DOMContentLoaded en nueva_reserva.html cargado.");
-
-            // Asegurarse de que currentUser se carga desde localStorage al inicio de la página.
-            // Aunque common.js ya lo hace, esta llamada adicional garantiza que la variable
-            // global 'currentUser' esté disponible y actualizada para este script específico.
-            getCurrentUser();
-            console.log("currentUser global después de carga de página (nueva_reserva.html):", currentUser);
+            getCurrentUser(); // Asegúrate de cargar el usuario al inicio
+            console.log("currentUser global después de carga de página:", currentUser);
 
             const vehicleSelect = document.getElementById('vehicleSelect');
             const startDateInput = document.getElementById('startDate');
@@ -105,18 +101,44 @@
 
             // Cargar vehículos en el select
             function loadVehicles() {
-                console.log("loadVehicles() ejecutándose. Vehículos disponibles:", vehicles);
+                console.log("loadVehicles() ejecutándose.");
+                console.log("Estado actual del array 'vehicles' al inicio de loadVehicles():", vehicles);
+
                 vehicleSelect.innerHTML = '<option value="">-- Selecciona --</option>'; // Reinicia las opciones
-                vehicles.forEach(vehicle => {
-                    // Solo listar vehículos con estado 'available' o 'cleaning' (para que se puedan reservar si no están alquilados o en mantenimiento)
-                    if (vehicle.status === 'available' || vehicle.status === 'cleaning') {
+                
+                if (vehicles && vehicles.length > 0) {
+                    let vehiclesAdded = 0;
+                    vehicles.forEach(vehicle => {
+                        console.log(`Procesando vehículo: ${vehicle.model}, Estado: ${vehicle.status}`);
+                        // Solo listar vehículos con estado 'available' o 'cleaning'
+                        if (vehicle.status === 'available' || vehicle.status === 'cleaning') {
+                            const option = document.createElement('option');
+                            option.value = vehicle.id;
+                            option.textContent = `${vehicle.model} (${vehicle.licensePlate}) - $${vehicle.dailyRate}/día`;
+                            vehicleSelect.appendChild(option);
+                            vehiclesAdded++;
+                            console.log(`Vehículo añadido: ${vehicle.model}`);
+                        } else {
+                            console.log(`Vehículo '${vehicle.model}' no disponible para reservar (estado: ${vehicle.status}). Saltando.`);
+                        }
+                    });
+                    console.log(`Total de vehículos añadidos al select: ${vehiclesAdded}`);
+                    if (vehiclesAdded === 0) {
+                        console.log("¡Advertencia! No se añadieron vehículos al select. Revisa los estados en data.js.");
                         const option = document.createElement('option');
-                        option.value = vehicle.id;
-                        option.textContent = `${vehicle.model} (${vehicle.licensePlate}) - $${vehicle.dailyRate}/día`;
+                        option.value = "";
+                        option.textContent = "-- No hay vehículos disponibles --";
                         vehicleSelect.appendChild(option);
+                        vehicleSelect.disabled = true; // Deshabilita el select si no hay opciones
                     }
-                });
-                console.log("Vehículos cargados en el select.");
+                } else {
+                    console.log("El array 'vehicles' está vacío o no está definido. No se pueden cargar vehículos.");
+                    const option = document.createElement('option');
+                    option.value = "";
+                    option.textContent = "-- No se cargaron vehículos --";
+                    vehicleSelect.appendChild(option);
+                    vehicleSelect.disabled = true; // Deshabilita el select si no hay opciones
+                }
             }
 
             // Calcular costo estimado
@@ -130,22 +152,20 @@
                     const startDate = new Date(startDateStr);
                     const endDate = new Date(endDateStr);
 
-                    // Validar que las fechas sean válidas y la fecha final no sea antes que la inicial
                     if (isNaN(startDate.getTime()) || isNaN(endDate.getTime()) || endDate < startDate) {
                         estimatedCostSpan.textContent = `$0.00`;
-                        return; // Salir si las fechas no son válidas
+                        return;
                     }
 
                     const selectedVehicle = vehicles.find(v => v.id === selectedVehicleId);
                     if (selectedVehicle) {
                         const timeDiff = endDate.getTime() - startDate.getTime();
-                        // +1 para incluir el día de devolución en el cálculo de días
                         const diffDays = Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1;
 
                         totalCost = selectedVehicle.dailyRate * diffDays;
 
-                        if (gpsCheckbox.checked) totalCost += (5 * diffDays); // Costo GPS por día
-                        if (childSeatCheckbox.checked) totalCost += 10; // Costo silla por alquiler
+                        if (gpsCheckbox.checked) totalCost += (5 * diffDays);
+                        if (childSeatCheckbox.checked) totalCost += 10;
                     }
                 }
                 estimatedCostSpan.textContent = `$${totalCost.toFixed(2)}`;
@@ -164,7 +184,6 @@
                 e.preventDefault();
                 console.log("Evento submit de newReservationForm disparado.");
 
-                // Asegurarse de que currentUser esté actualizado justo antes de la validación
                 getCurrentUser();
                 console.log("currentUser al inicio del handler submit:", currentUser);
 
@@ -173,15 +192,13 @@
                     showMessage('reservationMessage', 'Debes iniciar sesión para hacer una reserva.', 'error');
                     return;
                 }
-                // Si el usuario logueado no es un 'client', puede que no deba reservar
-                // Puedes ajustar esta condición según tus reglas de negocio.
-                // Por ahora, permitimos que cualquier usuario logueado (incluido admin) haga la reserva para depurar.
-                // Si quisieras que solo 'client' pueda reservar, añade:
-                // if (currentUser.role !== 'client') {
-                //     showMessage('reservationMessage', 'Tu perfil no tiene permisos para realizar reservas.', 'error');
-                //     return;
-                // }
 
+                // Consideración adicional para el rol 'admin'
+                if (currentUser.role === 'admin') {
+                     console.log("Validación: Usuario es administrador. Los administradores no pueden hacer reservas de cliente.");
+                     showMessage('reservationMessage', 'Como administrador, no puedes realizar reservas de cliente. Usa un perfil de cliente.', 'error');
+                     return;
+                }
 
                 const selectedVehicleId = vehicleSelect.value;
                 const startDate = startDateInput.value;
@@ -211,13 +228,8 @@
                 }
                 console.log("Validación: Fechas válidas.");
 
-                // Simular verificación de disponibilidad
-                // Esta lógica verifica si HAY ALGUNA reserva existente que se solape con las nuevas fechas
-                // para el MISMO vehículo. Si la hay, isAvailable será false.
                 const isAvailable = !reservations.some(res =>
                     res.vehicleId === selectedVehicleId &&
-                    // Comprueba si los rangos de fechas se solapan:
-                    // (Inicio de nueva reserva < Fin de reserva existente) Y (Fin de nueva reserva > Inicio de reserva existente)
                     (new Date(startDate) < new Date(res.endDate) && new Date(endDate) > new Date(res.startDate))
                 );
 
@@ -230,11 +242,9 @@
                 }
                 console.log("Validación: Vehículo disponible. Procediendo a crear reserva.");
 
-                // Simular creación de reserva
                 const selectedVehicle = vehicles.find(v => v.id === selectedVehicleId);
                 console.log("Objeto del vehículo seleccionado:", selectedVehicle);
 
-                // ** IMPORTANTE: Asegúrate de que selectedVehicle no es undefined si el select no tiene valor válido
                 if (!selectedVehicle) {
                     console.log("Error crítico: Vehículo seleccionado no encontrado en el array 'vehicles'.");
                     showMessage('reservationMessage', 'Error interno: El vehículo seleccionado no pudo ser encontrado.', 'error');
@@ -247,21 +257,19 @@
 
 
                 const newReservation = {
-                    id: generateId('r'), // Asegúrate que 'generateId' está accesible desde 'data.js'
+                    id: generateId('r'),
                     vehicleId: selectedVehicleId,
-                    userId: currentUser.id, // Asegúrate que currentUser.id exista
+                    userId: currentUser.id,
                     startDate: startDate,
                     endDate: endDate,
-                    status: 'confirmed', // o 'pending'
+                    status: 'confirmed',
                     totalCost: calculatedCost.toFixed(2)
                 };
                 console.log("Objeto de nueva reserva creado:", newReservation);
 
-                // Añadir a la lista de reservas (temporalmente en la memoria del navegador)
                 reservations.push(newReservation);
                 console.log("Array de reservas después de añadir:", reservations);
 
-                // Opcional: Actualizar el estado del vehículo a "rented" si es una reserva inmediata
                 const vehicleToUpdate = vehicles.find(v => v.id === selectedVehicleId);
                 if (vehicleToUpdate && (new Date(startDate)).toDateString() === (new Date()).toDateString()) {
                      vehicleToUpdate.status = 'rented';
@@ -270,17 +278,18 @@
 
                 showMessage('reservationMessage', `¡Reserva confirmada para ${selectedVehicle.model}! Costo: $${newReservation.totalCost}`, 'success');
                 console.log("Mensaje de reserva confirmada mostrado.");
-                newReservationForm.reset(); // Limpia el formulario
-                estimatedCostSpan.textContent = '$0.00'; // Restablece el costo estimado
+                newReservationForm.reset();
+                estimatedCostSpan.textContent = '$0.00';
                 console.log("Formulario y costo estimado restablecidos.");
 
-                // Puedes redirigir a mis_reservas.html después de un breve retraso
+                // Si quieres redirigir a mis_reservas.html después de confirmar, descomenta:
                 // console.log("Redirigiendo a mis_reservas.html en 2 segundos...");
                 // setTimeout(() => { window.location.href = 'mis_reservas.html'; }, 2000);
             });
 
             // Llamadas iniciales al cargar la página
             loadVehicles(); // Carga los vehículos disponibles en el select
+            
             // Asegura que la fecha de inicio no sea anterior a hoy
             const today = new Date().toISOString().split('T')[0];
             startDateInput.setAttribute('min', today);
