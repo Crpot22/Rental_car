@@ -1,9 +1,9 @@
 // js/data.js
 
 // Datos de usuarios (simulados)
-let users = [
-    { id: 'u001', username: 'admin@autorenta.com', password: 'password123', name: 'Administrador' },
-    { id: 'u002', username: 'cliente@mail.com', password: 'password456', name: 'Cliente Ej.' }
+const users = [
+    { id: 'u001', username: 'admin@autorenta.com', password: 'password123', name: 'Administrador', role: 'admin' },
+    { id: 'u002', username: 'cliente@mail.com', password: 'password456', name: 'Cliente Ej.', role: 'client' }
 ];
 
 // Datos de vehículos (simulados)
@@ -23,7 +23,7 @@ let vehicles = [
         model: 'Dodge Charger',
         licensePlate: 'XYZ-456',
         lastClient: 'Ana Gómez',
-        status: 'rented',
+        status: 'available', // CAMBIADO a 'available' para que aparezca en el selector de vehículos
         dailyRate: 60
     },
     {
@@ -32,7 +32,7 @@ let vehicles = [
         model: 'Volkswagen Jetta',
         licensePlate: 'LMN-789',
         lastClient: 'N/A',
-        status: 'maintenance',
+        status: 'available', // CAMBIADO a 'available'
         dailyRate: 35
     },
     {
@@ -41,7 +41,7 @@ let vehicles = [
         model: 'Suzuki Swift',
         licensePlate: 'PQR-012',
         lastClient: 'Carlos Ruiz',
-        status: 'cleaning',
+        status: 'available', // CAMBIADO a 'available'
         dailyRate: 50
     },
     {
@@ -76,9 +76,6 @@ let maintenances = [
     { id: 'm001', vehicleId: 'v003', date: '2025-05-15', type: 'Revisión General', notes: 'Cambio de aceite y filtros.', status: 'completed' },
     { id: 'm002', vehicleId: 'v001', date: '2025-06-10', type: 'Frenos', notes: 'Pastillas delanteras, pendiente.', status: 'pending' }
 ];
-
-// Simulamos un usuario logueado actualmente (sería 'null' si no hay nadie)
-let currentUser = null; // Al iniciar sesión, puedes cambiar esto a { id: 'u001', username: '...' }
 
 // Función para generar un ID único simple (solo para este proyecto)
 function generateId(prefix) {
